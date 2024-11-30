@@ -1,0 +1,3 @@
+# A Bluesky client for Emacs
+
+This repository hosts a Bluesky client for emacs.  As of now, this is currently being built, and there's no promise that it will ever be released, although that is my intention.

@@ -188,14 +188,6 @@ Anything in here is assumed to be cacheable indefinitely.")
   "Get an image with id CID from account DID."
   (create-image (bluesky-conn-get-blob host did cid) nil 'data))
 
-;;; Test code
-
-(defun bluesky-conn-test ()
-  (interactive)
-  (let ((host "bsky.social")
-        (auth-info (car (auth-source-search :host bluesky-host))))
-    (bluesky-conn-create-session host (plist-get auth-info :user) (plist-get auth-info :secret))))
-
 (provide 'bluesky-conn)
 
 ;;; bluesky-conn.el ends here

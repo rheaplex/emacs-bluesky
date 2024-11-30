@@ -206,7 +206,14 @@ AUTHOR-DID is the DID of the author of the post, used to fetch content."
                          (plist-get record :createdAt))
                         'face 'bluesky-time-face)
             "\n")
-    (bluesky-ui-render-record record author-did)))
+    (bluesky-ui-render-record record author-did)
+    (insert "\n"
+            (format "%d comments — %d repost — %d quotes — %d likes"
+                    (plist-get post :replyCount)
+                    (plist-get post :repostCount)
+                    (plist-get post :quoteCount)
+                    (plist-get post :likeCount))
+            "\n")))
 
 (provide 'bluesky-ui)
 ;;; bluesky-ui.el ends here

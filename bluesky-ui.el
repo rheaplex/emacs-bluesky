@@ -45,31 +45,31 @@
 (defvar bluesky-host bluesky-default-host
   "The host of the Bluesky server.")
 
-(defface bluesky-author-name-face
+(defface bluesky-author-name
   '((t :inherit font-lock-keyword-face))
   "Face for author names in Bluesky.")
 
-(defface bluesky-author-handle-face
+(defface bluesky-author-handle
   '((t :inherit font-lock-normal-face))
   "Face for author handles in Bluesky.")
 
-(defface bluesky-author-attribute-face
+(defface bluesky-author-attribute
   '((t :inherit font-lock-comment-face))
   "Face for author attributes in Bluesky.")
 
-(defface bluesky-time-face
+(defface bluesky-time
   '((t :inherit font-lock-normal-face))
   "Face for time in Bluesky UI")
 
-(defface bluesky-mention-face
+(defface bluesky-mention
   '((t :inherit link))
   "Face for mentions in Bluesky.")
 
-(defface bluesky-hashtag-face
+(defface bluesky-hashtag
   '((t :inherit link))
   "Face for hashtags in Bluesky.")
 
-(defface bluesky-link-face
+(defface bluesky-link
   '((t :inherit link))
   "Face for links in Bluesky.")
 
@@ -88,9 +88,9 @@
                  '(:width (1 . ch) :height (1 . ch) :margin 2)))
   (insert
    (concat
-    (propertize (plist-get author :displayName) 'face 'bluesky-author-name-face)
+    (propertize (plist-get author :displayName) 'face 'bluesky-author-name)
     " "
-    (propertize (concat "@" (plist-get author :handle)) 'face 'bluesky-author-handle-face)
+    (propertize (concat "@" (plist-get author :handle)) 'face 'bluesky-author-handle)
     " "
     (let* ((viewer (plist-get author :viewer))
            (muted (not (eq (plist-get viewer :muted) :json-false)))
@@ -104,7 +104,7 @@
                                  (when blocked '("Blocked"))
                                  (when following '("Following")))
                                 ", "))
-           'face 'bluesky-author-attribute-face)
+           'face 'bluesky-author-attribute)
         "")))))
 
 (defun bluesky-ui-relative-time (timestr)
@@ -165,9 +165,9 @@ a byte range."
         (when (and features (> (length features) 0))
           (let ((feature (aref features 0)))
             (overlay-put overlay 'face (pcase type
-                                         ("mention" 'bluesky-mention-face)
-                                         ("hashtag" 'bluesky-hashtag-face)
-                                         ("link" 'bluesky-link-face)))))))))
+                                         ("mention" 'bluesky-mention)
+                                         ("hashtag" 'bluesky-hashtag)
+                                         ("link" 'bluesky-link)))))))))
 
 (defun bluesky-ui-fetch-image-reference (ref author-did)
   "Return the image object from reference REF.
@@ -233,7 +233,7 @@ AUTHOR-DID is the DID of the author of the post, used to fetch content."
     (insert " "
             (propertize (bluesky-ui-relative-time
                          (plist-get record :createdAt))
-                        'face 'bluesky-time-face)
+                        'face 'bluesky-time)
             "\n")
     (bluesky-ui-render-record record author-did)
     (insert "\n"

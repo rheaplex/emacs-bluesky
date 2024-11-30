@@ -73,6 +73,14 @@
   '((t :inherit link))
   "Face for links in Bluesky.")
 
+(defface bluesky-external-title
+  '((t :inherit bold))
+  "Face for external website titles.")
+
+(defface bluesky-external-description
+  '((t :inherit default))
+  "Face for external website descriptions.")
+
 (defun bluesky-ui-render-author (author)
   "Render AUTHOR to the current buffer"
   (insert-image (append
@@ -161,16 +169,35 @@ a byte range."
                                          ("hashtag" 'bluesky-hashtag-face)
                                          ("link" 'bluesky-link-face)))))))))
 
-(defun bluesky-ui-scaled-size (aspect-ratio)
-  "From ASPECT-RATIO, calculate the scaled size of an image.
-The output is suitable for appending to an image object to set the size
-of the image."
-  (let ((width (plist-get aspect-ratio :width))
-        (height (plist-get aspect-ratio :height)))
-    (if (> width bluesky-image-max-width)
-        (let ((scaled-height (/ (* height bluesky-image-max-width) width)))
-          `(:width ,bluesky-image-max-width :height ,scaled-height))
-      `(:width ,width :height ,height))))
+(defun bluesky-ui-fetch-image-reference (ref author-did)
+  "Return the image object from reference REF.
+REF can be a URL or an object.
+AUTHOR-DID is the DID of the author potentially uploading the image."
+  (if (stringp ref)
+      (bluesky-conn-get-image-by-url (plist-get external :thumb))
+    (bluesky-conn-get-image-by-ref bluesky-host author-did
+                                   (plist-get (plist-get ref :ref)
+                                              :$link))))
+
+(defun bluesky-ui-render-external (external author-did)
+  "Render EXTERNAL to the current buffer.
+AUTHOR-DID is the DID of the author of the post, used to fetch content."
+  (let ((pos (point)))
+    (insert-image (append
+                   (bluesky-ui-fetch-image-reference (plist-get external :thumb)
+                                                     author-did)
+                   `(:max-width ,bluesky-image-max-width)))
+    (insert " "
+            (propertize
+             (plist-get external :title)
+             'face 'bluesky-external-title)
+            "\n"
+            (propertize
+             (plist-get external :description)
+             'face 'bluesky-external-description))
+    (let ((overlay (make-overlay pos (point))))
+      (overlay-put overlay 'bluesky external)))
+  (insert "\n"))
 
 (defun bluesky-ui-render-embed (embed author-did)
   "Render EMBED to the current buffer.
@@ -185,7 +212,9 @@ AUTHOR-DID is the DID of the author of the post, used to fetch content."
                       (plist-get
                        (plist-get (plist-get image :image) :ref)
                        :$link))
-                     `(:max-width ,bluesky-image-max-width))))))
+                     `(:max-width ,bluesky-image-max-width))))
+    (when-let ((external (plist-get embed :external)))
+      (bluesky-ui-render-external external author-did))))
 
 (defun bluesky-ui-render-record (record author-did)
   "Render RECORD to the current buffer."

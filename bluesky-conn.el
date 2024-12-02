@@ -59,37 +59,45 @@ Bluesky API. If ON-SUCCESS is nil, the request will be made
 syncronously, and a JSON object will be returned.
 
 ON-ERROR handles all errors."
-  (let* ((url (format "https://%s/xrpc/%s%s" host method
-                      (if (and args (eq 'get http-method))
-                          (concat "?"
-                                  (mapconcat (lambda (pair)
-                                               (format "%s=%s" (url-hexify-string (substring-no-properties (symbol-name (car pair)) 1))
-                                                       (url-hexify-string (format "%s" (cadr pair)))))
-                                             (seq-filter (lambda (pair) (not (null (cadr pair))) args)
-                                                         (seq-partition args 2))
-                                             "&"))
-                        "")))
-         (args (flatten-list (funcall #'append
+  (let* ((args (flatten-list (funcall #'append
                                       (seq-filter (lambda (double)
                                                     (not (null (cadr double))))
                                                   (seq-partition args 2)))))
+         (url (format "https://%s/xrpc/%s%s" host method
+                      (if (and args (eq 'get http-method))
+                          (let ((params (mapconcat (lambda (pair)
+                                                     (format "%s=%s" (url-hexify-string (substring-no-properties (symbol-name (car pair)) 1))
+                                                             (url-hexify-string (format "%s" (cadr pair)))))
+                                                   args
+                                                   "&")))
+                            (concat "?" params))
+                        "")))
          (headers (append
                    (when auth-header `(("Authorization" .
                                         ,(format "Bearer %s" auth-header))))
                    '(("Content-Type" . "application/json")))))
-    (apply #'plz http-method url :as #'bluesky-conn-json-read
-           :headers headers
-           (append
-            (when (eq http-method 'post) (list :data (json-encode args)))
-            (when on-success (list :then on-success))
-            (when on-error (list :else
-                                 (when on-error
-                                   (lambda (resp)
-                                     (if-let ((err-resp (plz-error-response resp))
-                                              (err (bluesky-conn-json-read-from-string
-                                                    err-resp)))
-                                         (funcall on-error err)
-                                       (error "No error response found in %s" resp))))))))))
+    (condition-case err
+        (apply #'plz http-method url :as #'bluesky-conn-json-read
+               :headers headers
+               (append
+                (when (and args (eq http-method 'post))
+                  (list :body (json-encode args)))
+                (when on-success (list :then on-success))
+                (when (and on-success on-error)
+                  (list :else
+                        (lambda (resp)
+                          (if-let ((err-resp (plz-error-response resp))
+                                   (err (bluesky-conn-json-read-from-string
+                                         (plz-response-body err-resp))))
+                              (funcall on-error err)
+                            (error "No error response found in %s" resp)))))))
+      (plz-error
+       (if on-error
+           (if-let* ((err-resp (plz-error-response (nth 2 err)))
+                     (err (bluesky-conn-json-read-from-string (plz-response-body err-resp))))
+               (funcall on-error err)
+             (error "No error response found in %s" err))
+         (error "Unhandled error: %s" err))))))
 
 (defun bluesky-conn-call-authed (host handle method on-success on-error &rest args)
   "Call METHOD on the Bluesky instance at HOST using HANDLE.
@@ -107,14 +115,14 @@ auth refreshes."
                             nil nil #'equal)))
     (unless session
       (error "Unable to get the Bluesky authentication token, you may need to log in first."))
-    (bluesky-conn-call host 'get method (plist-get session :accessJwt)
-                       on-success
-                       (lambda (err)
-                         (if (and auth-header (equal "ExpiredToken" (plist-get err :error)))
-                             (progn (bluesky-conn-refresh-session host)
-                                    (apply #'bluesky-conn-call host method auth-header args))
-                           (when on-error (funcall on-error resp))))
-                       args)))
+    (apply #'bluesky-conn-call host 'get method (plist-get session :accessJwt)
+           on-success
+           (lambda (err)
+             (if (equal "ExpiredToken" (plist-get err :error))
+                 (progn (bluesky-conn-refresh-session host handle)
+                        (apply #'bluesky-conn-call-authed host handle method on-success on-error args))
+               (when on-error (funcall on-error resp))))
+           args)))
 
 (defun bluesky-conn-create-session (host handle password)
   "Create a session with the Bluesky API at HOST using HANDLE and PASSWORD.
@@ -134,11 +142,13 @@ session object in `bluesky-session' for future use, and also return it."
               result)
       (error "Unable to create a session for host %s" host))))
 
+(defun bluesky-conn-get-session (host handle)
+  "Get a session for HANDLE at HOST."
+  (alist-get (format "%s/%s" host handle) bluesky-session nil nil #'equal))
+
 (defun bluesky-conn-refresh-session (host handle)
   "Refresh the session for the Bluesky instance at HOST using HANDLE."
-  (let ((session (alist-get (format "%s/%s" host handle)
-                            bluesky-session
-                            nil nil #'equal)))
+  (let ((session (bluesky-conn-get-session host handle)))
     (unless session
       (error "No session found to refresh for host %s" host))
     (setf (alist-get (format "%s/%s" host handle)
@@ -160,7 +170,7 @@ COLLECTION is the collection to post to, and RECORD is the record, created by
           (when langs `(:langs ,langs))
           (when facets `(:facets ,facets))))
 
-(defun bluesky-get-timeline (host handle &optional cursor limit)
+(defun bluesky-conn-get-timeline (host handle &optional cursor limit)
   "Get the timeline for the user HANDLE at HOST.
 The CURSOR defines where to start at, and LIMIT is the number of posts
 to return."

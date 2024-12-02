@@ -33,17 +33,9 @@
   "Bluesky client for Emacs."
   :group 'applications)
 
-(defcustom bluesky-default-host "https://bluesky.dev"
-  "The default host of the Bluesky server."
-  :type 'string
-  :group 'bluesky)
-
 (defcustom bluesky-image-max-width 250
   "The maximum width of images in the Bluesky UI."
   :type 'integer)
-
-(defvar bluesky-host bluesky-default-host
-  "The host of the Bluesky server.")
 
 (defface bluesky-author-name
   '((t :inherit font-lock-keyword-face))
@@ -84,7 +76,7 @@
 (defun bluesky-ui-render-author (author)
   "Render AUTHOR to the current buffer"
   (insert-image (append
-                 (bluesky-conn-get-image (plist-get author :avatar))
+                 (bluesky-conn-get-image-by-url (plist-get author :avatar))
                  '(:width (1 . ch) :height (1 . ch) :margin 2)))
   (insert
    (concat
@@ -128,7 +120,7 @@ TIMESTR is a string such as 2024-11-29T22:31:30.465Z."
       byte-offset
     ;; We want to find the char offset that corresponds to the byte offset.
     ;; Doing it linearlly may be too expensive, so let's do a binary search.
-    (unless (< byte-offset (string-bytes text))
+    (unless (<= byte-offset (string-bytes text))
       (error "Byte offset %d is out of range" byte-offset))
     (let* ((len (length text))
            (start 0)

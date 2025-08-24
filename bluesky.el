@@ -140,4 +140,6 @@ user will be prompted for the password."
       (bluesky-feed-refresh)
       (display-buffer bluesky-timeline-buffer-name))))
 
+(provide 'bluesky)
+
 ;;; bluesky.el ends here

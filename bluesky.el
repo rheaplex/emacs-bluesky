@@ -96,7 +96,7 @@
     (setq bluesky-feed-cursor (plist-get feed :cursor))
     (bluesky-feed-render feed)))
 
-(defun bluesky-connect (&optional username password host)
+(defun bluesky-connect ()
   "Connect to a Bluesky server.
 
 USERNAME is the username to connect with.  It should not include the @
@@ -111,14 +111,12 @@ user will be prompted for the password.
 HOST is the Bluesky host to connect to. This can be nil, and will
 use the default if so."
   (interactive)
-  (let* ((host (or host bluesky-default-host))
+  (let* ((host bluesky-default-host)
          (authinfo (car (auth-source-search :host host)))
-         (username (or username
-                       (when authinfo
+         (username (or (when authinfo
                          (plist-get authinfo :user))
                        (read-string "Username: ")))
-         (password (or password
-                       (when authinfo
+         (password (or (when authinfo
                          (plist-get authinfo :secret))
                        (read-passwd "Password: "))))
     (unless (and username password)

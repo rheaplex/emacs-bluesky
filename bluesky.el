@@ -1,10 +1,10 @@
-;;; bluesky.el, a Bluesky client for Emacs -*- lexical-binding: t -*-
+;;; bluesky.el --- a Bluesky client for Emacs -*- lexical-binding: t -*-
 
 ;; Copyright (c) 2024  Andrew Hyatt <ahyatt@gmail.com>
 
 ;; Author: Andrew Hyatt <ahyatt@gmail.com>
 ;; Homepage: https://github.com/ahyatt/ekg
-;; Package-Requires: ((plz "0.9.0))
+;; Package-Requires: ((plz "0.9.0"))
 ;; Keywords: outlines, hypermedia
 ;; Version: 0.0.0
 ;; SPDX-License-Identifier: GPL-3.0-or-later
@@ -106,7 +106,10 @@ username.
 
 PASSWORD is the password to connect with.  This can be nil, and if so,
 the password will be found via `auth-source-search'.  Otherwise, the
-user will be prompted for the password."
+user will be prompted for the password.
+
+HOST is the Bluesky host to connect to. This can be nil, and will
+use the default if so."
   (interactive)
   (let* ((host (or host bluesky-default-host))
          (authinfo (car (auth-source-search :host host)))
